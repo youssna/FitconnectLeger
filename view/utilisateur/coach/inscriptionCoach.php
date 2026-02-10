@@ -1,8 +1,8 @@
 <section class="form-section" style="background-color: #eee;">
     <div class="form-card" style="max-width: 600px; border-top: 5px solid #333;">
-        <h2 style="color: #333;">Candidature Coach</h2>
+        <h2 style="color: #333;">Inscription Coach</h2>
         <p style="text-align:center; color:#666; margin-bottom:20px;">
-            Rejoignez l'élite Basic-Fit Training. Votre candidature sera examinée par un administrateur.
+            Rejoignez l'élite Basic-Fit Training.
         </p>
 
         <form action="index.php" method="POST">
@@ -43,13 +43,7 @@
                 <input type="text" name="adresse" class="form-input" placeholder="Ville, Code Postal..." required>
             </div>
 
-            <div class="form-group">
-    <label>Êtes-vous membre Basic-Fit ?</label>
-    <select name="basic_fit" class="form-input" required>
-        <option value="0">Non</option>
-        <option value="1">Oui</option>
-    </select>
-</div>
+            
 
             
 
@@ -67,7 +61,7 @@
                 <input type="text" name="cv" class="form-input" placeholder="https://..." required>
                 </div>
 
-            <button type="submit" class="btn btn-primary full-width" style="background-color: #333; border-color: #333;">Envoyer ma candidature</button>
+            <button type="submit" class="btn btn-primary full-width" style="background-color: #333; border-color: #333;">S'inscrire</button>
         </form>
 
         <div class="form-footer">

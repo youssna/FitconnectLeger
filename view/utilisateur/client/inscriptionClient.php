@@ -40,13 +40,7 @@
                 </div>
             </div>
 
-            <div class="form-group">
-                <label>Êtes-vous déjà adhérent Basic-Fit ?</label>
-                <select name="basic_fit" class="form-input">
-                    <option value="1">Oui</option>
-                    <option value="0">Non</option>
-                </select>
-            </div>
+            
 
             <div class="form-group">
                 <label>Votre Objectif :</label>
