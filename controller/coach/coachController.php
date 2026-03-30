@@ -1,199 +1,206 @@
 <?php
 
-// Inclusion du Modèle
 require_once('model/coach/coachModel.php');
 
-// GESTION DES REQUÊTES POST (Action)
+/**
+ * --- PARTIE ROUTAGE ---
+ */
 if (isset($_POST['action'])) {
 
-    $coachController = new CoachController($bdd); // $bdd vient de index.php
+    $coachController = new CoachController($bdd);
 
     switch ($_POST['action']) {
-        case 'ajouter': // Candidature
+        case 'ajouter': 
             $coachController->create();
             break;
-
-        case 'connexion': // Login
+            
+        case 'connexion': 
             $coachController->login();
             break;
-
-        case 'deconnexion': // Logout
+            
+        case 'deconnexion': 
             $coachController->logout();
             break;
-
-        case 'update': // Mise à jour profil
+            
+        case 'update': 
             $coachController->update();
             break;
-
-        case 'supprimer': // Supprimer compte
-            $coachController->delete();
-            break;
             
-        case 'accepter_client': // Matching
+        case 'accepter_client': 
             $coachController->accepterClient();
             break;
-
+            
+        case 'refuser_client': 
+            $coachController->refuserClient();
+            break;
+            
         default:
             header('Location: index.php?page=espace_coach');
-            break;
+            exit;
     }
 }
 
+/**
+ * --- CLASSE COACH CONTROLLER ---
+ */
 class CoachController {
 
     private $coach;
+    private $bdd;
 
-    function __construct($bdd) {
+    public function __construct($bdd) {
+        $this->bdd = $bdd;
         $this->coach = new Coach($bdd);
     }
 
+    /**
+     * Inscription d'un nouveau coach (Candidature)
+     */
     public function create() {
-    // ✅ ÉTAPE 1 : Récupération et nettoyage des données
-    $email = trim($_POST['mail']);
-    $motdepasse = trim($_POST['motdepasse']);
-    $motdepasse_confirm = trim($_POST['motdepasse_confirm']);
+        // Nettoyage des données
+        $nom        = trim($_POST['nom']);
+        $prenom     = trim($_POST['prenom']);
+        $email      = trim($_POST['mail']);
+        $telephone  = isset($_POST['telephone']) ? trim($_POST['telephone']) : null;
+        $adresse    = trim($_POST['adresse']);
+        $specialite = $_POST['specialite'];
+        $cv         = trim($_POST['cv']); // URL ou nom du fichier
+        $mdp        = trim($_POST['motdepasse']);
+        $mdp_confirm = trim($_POST['motdepasse_confirm']);
 
-    // ✅ ÉTAPE 2 : Vérifier si l'email existe déjà
-    if ($this->coach->emailExiste($email)) {
-        header('Location: index.php?page=inscription_coach&error=email_existe');
+        // 1. Vérifications de sécurité
+        if ($this->coach->emailExiste($email)) {
+            header('Location: index.php?page=inscription_coach&error=email_existe');
+            exit;
+        }
+
+        // 2. Hachage du mot de passe
+        $mdpHash = password_hash($mdp, PASSWORD_DEFAULT);
+
+        // 3. Insertion en base (valide est à 0 par défaut dans le Model)
+        $resultat = $this->coach->ajouterCoach(
+            $nom, 
+            $prenom, 
+            $email, 
+            $telephone, 
+            $adresse, 
+            $specialite, 
+            $cv, 
+            $mdpHash
+        );
+
+        if ($resultat) {
+            header('Location: index.php?page=accueil&message=candidature_envoyee');
+        } else {
+            die("Erreur lors de l'envoi de la candidature.");
+        }
         exit;
     }
 
-    // ✅ ÉTAPE 3 : Validation - les deux mots de passe doivent correspondre
-    if ($motdepasse !== $motdepasse_confirm) {
-        header('Location: index.php?page=inscription_coach&error=mdp_different');
-        exit;
-    }
-
-    // ✅ ÉTAPE 4 : Validation - longueur minimale (8 caractères)
-    if (strlen($motdepasse) < 8) {
-        header('Location: index.php?page=inscription_coach&error=mdp_trop_court');
-        exit;
-    }
-
-    // ✅ ÉTAPE 5 : Hachage du mot de passe avant insertion
-    $mot_de_passe_hash = password_hash($motdepasse, PASSWORD_DEFAULT);
-
-    // ✅ ÉTAPE 6 : Insertion dans la base de données
-    $this->coach->ajouterCoach(
-        $_POST['nom'],
-        $_POST['prenom'],
-        $email,
-        $_POST['adresse'],
-        $_POST['basic_fit'],
-        $_POST['specialite'],
-        $_POST['cv'],
-        $mot_de_passe_hash
-    );
-
-    // ✅ ÉTAPE 7 : Redirection vers la page de succès
-    header('Location: index.php?page=accueil&message=candidature_envoyee');
-    exit;
-}
-
+    /**
+     * Connexion sécurisée avec vérification de validation Admin
+     */
     public function login() {
-        $mail = trim($_POST['mail']);
-        $mdp = trim($_POST['motdepasse']);
-
-        $user = $this->coach->getCoachByEmail($mail);
-
-        if ($user && password_verify($mdp, $user['mot_de_passe'])) {
+        $user = $this->coach->getCoachByEmail(trim($_POST['mail']));
+    
+        if ($user && password_verify(trim($_POST['motdepasse']), $user['mot_de_passe'])) {
             
+            // Vérification : le coach a-t-il été validé par l'Admin Java ?
+            if ($user['valide'] == 0) {
+                header('Location: index.php?page=connexion_coach&error=not_validated');
+                exit;
+            }
+    
+            // Session
             $_SESSION['id_coach'] = $user['id_coach'];
-            $_SESSION['prenom'] = $user['prenom'];
-            $_SESSION['role'] = 'coach'; 
+            $_SESSION['prenom']   = $user['prenom'];
+            $_SESSION['role']     = 'coach'; 
 
             header('Location: index.php?page=espace_coach');
             exit;
+            
         } else {
-            // Gestion des erreurs
-            if (!$user) {
-                header('Location: index.php?page=connexion_coach&error=email_inconnu');
-            } else {
-                header('Location: index.php?page=connexion_coach&error=mdp_faux');
-            }
+            header('Location: index.php?page=connexion_coach&error=auth');
             exit;
         }
     }
 
+    /**
+     * Déconnexion
+     */
     public function logout() {
         session_destroy();
         header('Location: index.php');
         exit;
     }
 
+    /**
+     * Dashboard : Statistiques et gestion des athlètes
+     */
     public function dashboard() {
-        // Sécurité
         if (!isset($_SESSION['id_coach'])) {
             header('Location: index.php?page=connexion_coach');
             exit;
         }
 
-        // Récupération des infos du coach
         $infosCoach = $this->coach->selectById($_SESSION['id_coach']);
         $maSpecialite = $infosCoach['specialite'];
 
-        // Matching : Clients en attente
-        $clientsEnAttente = $this->coach->getClientsCompatibles($maSpecialite);
+        // Récupère les clients qui ont un objectif correspondant à la spécialité
+        $clientsEnAttente = $this->coach->getClientsCompatibles($maSpecialite, $_SESSION['id_coach']);
 
-        // Clients déjà validés
+        // Récupère les clients déjà acceptés par ce coach
         $mesClients = $this->coach->mesClients($_SESSION['id_coach']);
 
-        // Affichage de la vue
         require('view/coach/espaceCoach.php');
     }
     
+    /**
+     * Accepter une demande d'athlète
+     */
     public function accepterClient() {
-        $this->coach->validerClient($_POST['id_client'], $_SESSION['id_coach']);
-        
-        header('Location: index.php?page=espace_coach');
+        if (isset($_POST['id_client'])) {
+            $this->coach->validerClient($_POST['id_client'], $_SESSION['id_coach']);
+        }
+        header('Location: index.php?page=espace_coach&message=client_accepte');
         exit;
     }
 
-    public function update() {
-        // ✅ ÉTAPE 1 : Gestion optionnelle du changement de mot de passe
-        $mot_de_passe_hash = null;
-        
-        if (!empty($_POST['motdepasse'])) {
-            $motdepasse = trim($_POST['motdepasse']);
-            $motdepasse_confirm = trim($_POST['motdepasse_confirm']);
-
-            // Validation
-            if ($motdepasse !== $motdepasse_confirm) {
-                header('Location: index.php?page=espace_coach&error=mdp_different');
-                exit;
-            }
-
-            if (strlen($motdepasse) < 8) {
-                header('Location: index.php?page=espace_coach&error=mdp_trop_court');
-                exit;
-            }
-
-            // Hachage du nouveau mot de passe
-            $mot_de_passe_hash = password_hash($motdepasse, PASSWORD_DEFAULT);
+    /**
+     * Refuser une demande d'athlète
+     */
+    public function refuserClient() {
+        if (isset($_POST['id_client'])) {
+            $this->coach->refuserClient($_POST['id_client'], $_SESSION['id_coach']);
         }
+        header('Location: index.php?page=espace_coach&message=client_refuse');
+        exit;
+    }
+
+    /**
+     * Mise à jour du profil coach
+     */
+    public function update() {
+        $mdpHash = null;
+        if (!empty($_POST['motdepasse'])) {
+            $mdpHash = password_hash($_POST['motdepasse'], PASSWORD_DEFAULT);
+        }
+        
+        $telephone = isset($_POST['telephone']) ? trim($_POST['telephone']) : null;
 
         $this->coach->modifierCoach(
-            $_POST['id_coach'],
-            $_POST['nom'],
-            $_POST['prenom'],
-            $_POST['mail'],
-            $_POST['adresse'],
-            $_POST['basic_fit'],
-            $_POST['specialite'],
-            $_POST['cv'],
-            $mot_de_passe_hash
+            $_POST['id_coach'], 
+            trim($_POST['nom']), 
+            trim($_POST['prenom']), 
+            trim($_POST['mail']), 
+            $telephone, 
+            trim($_POST['adresse']), 
+            $_POST['specialite'], 
+            trim($_POST['cv']), 
+            $mdpHash
         );
 
         header('Location: index.php?page=espace_coach&message=profil_modifie');
         exit;
     }
-
-    public function delete() {
-        $this->coach->supprimerCoach($_POST['id_coach']);
-        session_destroy(); // ⬅️ AJOUT : détruire la session après suppression
-        header('Location: index.php');
-        exit;
-    }
 }
-?>

@@ -1,80 +1,105 @@
 <?php
 
+/**
+ * Modèle Client : Gère toutes les interactions avec la table 'client'
+ */
 class Client {
 
     private $bdd;
 
-    function __construct($bdd){
+    public function __construct($bdd) {
         $this->bdd = $bdd;
     }
 
-    public function allClient(){
-        $req = $this->bdd->prepare("SELECT * FROM client");
+    /**
+     * Récupère la liste de tous les clients
+     */
+    public function allClient() {
+        $req = $this->bdd->prepare("SELECT * FROM client ORDER BY nom, prenom");
         $req->execute();
         return $req->fetchAll();
     }
 
-    public function ajouterClient($nom, $prenom, $mail, $mdp, $poids, $taille, $basic_fit, $objectif, $description){
-        // Attention à bien mettre la description dans la colonne 'motivation' si c'est le nom dans ta BDD
+    /**
+     * AJOUT : Enregistre un nouveau client en base de données
+     * Note : motivation correspond à la colonne en BDD et $description à la donnée du formulaire
+     */
+    public function ajouterClient($nom, $prenom, $mail, $telephone, $mdp, $poids, $taille, $objectif, $description) {
         $req = $this->bdd->prepare("
             INSERT INTO client 
-            (nom, prenom, mail, mot_de_passe, poids, taille, basic_fit, objectif, motivation)
+            (nom, prenom, mail, telephone, mot_de_passe, poids, taille, objectif, motivation, date_inscription)
             VALUES 
-            (:nom, :prenom, :mail, :mdp, :poids, :taille, :basic_fit, :objectif, :description)
+            (:nom, :prenom, :mail, :telephone, :mdp, :poids, :taille, :objectif, :description, NOW())
         ");
-
+        
         $req->bindParam(':nom', $nom);
         $req->bindParam(':prenom', $prenom);
         $req->bindParam(':mail', $mail);
+        $req->bindParam(':telephone', $telephone);
         $req->bindParam(':mdp', $mdp);
         $req->bindParam(':poids', $poids);
         $req->bindParam(':taille', $taille);
-        $req->bindParam(':basic_fit', $basic_fit);
         $req->bindParam(':objectif', $objectif);
         $req->bindParam(':description', $description);
-
+        
         return $req->execute();
     }
 
-    public function modifierClient($id_client, $nom, $prenom, $mail, $mdp, $poids, $taille, $basic_fit, $objectif,
-        $description){
+    /**
+     * MODIFICATION : Met à jour les informations d'un client existant
+     */
+    public function modifierClient($id_client, $nom, $prenom, $mail, $telephone, $mdp, $poids, $taille, $objectif, $description) {
         $req = $this->bdd->prepare("
             UPDATE client
-            SET nom = :nom, prenom = :prenom, mail = :mail, mot_de_passe = :mdp,
-                poids = :poids, taille = :taille, basic_fit = :basic_fit, objectif = :objectif,
+            SET nom = :nom, 
+                prenom = :prenom, 
+                mail = :mail, 
+                telephone = :telephone, 
+                mot_de_passe = :mdp,
+                poids = :poids, 
+                taille = :taille, 
+                objectif = :objectif,
                 motivation = :description
             WHERE id_client = :id_client
         ");
-
+        
         $req->bindParam(':id_client', $id_client);
         $req->bindParam(':nom', $nom);
         $req->bindParam(':prenom', $prenom);
         $req->bindParam(':mail', $mail);
+        $req->bindParam(':telephone', $telephone);
         $req->bindParam(':mdp', $mdp);
         $req->bindParam(':poids', $poids);
         $req->bindParam(':taille', $taille);
-        $req->bindParam(':basic_fit', $basic_fit);
         $req->bindParam(':objectif', $objectif);
         $req->bindParam(':description', $description);
-
+        
         return $req->execute();
     }
 
-    public function supprimerClient($id_client){
+    /**
+     * SUPPRESSION : Supprime un compte client
+     */
+    public function supprimerClient($id_client) {
         $req = $this->bdd->prepare("DELETE FROM client WHERE id_client = :id_client");
-        $req->bindParam(':id_client', $id_client);
+        $req->bindParam(':id_client', $id_client, PDO::PARAM_INT);
         return $req->execute();
     }
 
-    public function selectById($id_client){
+    /**
+     * SÉLECTION : Récupère les infos d'un client par son ID (pour le dashboard)
+     */
+    public function selectById($id_client) {
         $req = $this->bdd->prepare("SELECT * FROM client WHERE id_client = :id_client");
-        $req->bindParam(':id_client', $id_client);
+        $req->bindParam(':id_client', $id_client, PDO::PARAM_INT);
         $req->execute();
         return $req->fetch();
     }
 
-    // FONCTION INDISPENSABLE POUR LA CONNEXION
-    public function getClientByEmail($mail){
+    /**
+     * CONNEXION : Récupère les infos d'un client par son email
+     */
+    public function getClientByEmail($mail) {
         $req = $this->bdd->prepare("SELECT * FROM client WHERE mail = :mail");
         $req->bindParam(':mail', $mail);
         $req->execute();

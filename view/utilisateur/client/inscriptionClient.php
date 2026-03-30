@@ -1,5 +1,6 @@
 <section class="form-section">
-    <div class="form-card" style="max-width: 600px;"> <h2>Inscription Espace Client</h2>
+    <div class="form-card" style="max-width: 600px;"> 
+        <h2>Inscription Espace Client</h2>
 
         <form action="index.php" method="POST">
             
@@ -23,6 +24,11 @@
             </div>
 
             <div class="form-group">
+                <label>Téléphone :</label>
+                <input type="tel" name="telephone" class="form-input" required>
+            </div>
+
+            <div class="form-group">
                 <label>Mot de passe :</label>
                 <input type="password" name="motdepasse" class="form-input" required>
             </div>
@@ -40,8 +46,6 @@
                 </div>
             </div>
 
-            
-
             <div class="form-group">
                 <label>Votre Objectif :</label>
                 <select name="objectif" class="form-input">
@@ -50,7 +54,6 @@
                     <option value="remise_forme">Remise en forme</option>
                 </select>
             </div>
-
 
             <div class="form-group">
                 <label>Description / Motivation :</label>

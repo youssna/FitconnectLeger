@@ -27,25 +27,22 @@
             </div>
 
             <div class="form-group">
-            <label>Mot de passe :</label>
-            <input type="password" name="motdepasse" class="form-input" minlength="8" required>
-            <small style="color:#666;">Minimum 8 caractères</small>
+                <label>Téléphone :</label>
+                <input type="tel" name="telephone" class="form-input"  required>
             </div>
 
-<!-- Champ 2 : Confirmation -->
-<div class="form-group">
-    <label>Confirmer le mot de passe :</label>
-    <input type="password" name="motdepasse_confirm" class="form-input" minlength="8" required>
-</div>
+            <div class="form-group">
+                <label>Mot de passe :</label>
+                <input type="password" name="motdepasse" class="form-input" minlength="8" required>
+                <small style="color:#666;"></small>
+            </div>
+
+        
 
             <div class="form-group">
                 <label>Adresse Postale :</label>
                 <input type="text" name="adresse" class="form-input" placeholder="Ville, Code Postal..." required>
             </div>
-
-            
-
-            
 
             <div class="form-group">
                 <label>Votre Spécialité (Expertise) :</label>
@@ -59,7 +56,7 @@
             <div class="form-group">
                 <label>Votre CV (Lien LinkedIn ou Portfolio) :</label>
                 <input type="text" name="cv" class="form-input" placeholder="https://..." required>
-                </div>
+            </div>
 
             <button type="submit" class="btn btn-primary full-width" style="background-color: #333; border-color: #333;">S'inscrire</button>
         </form>

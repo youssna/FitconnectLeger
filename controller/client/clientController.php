@@ -1,12 +1,14 @@
 <?php
 
 require_once('model/client/clientModel.php');
-// Ces modèles sont indispensables pour le dashboard
 require_once('model/coach/coachModel.php');
 require_once('model/programme/programmeModel.php');
 
+/**
+ * --- PARTIE ROUTAGE ---
+ * Gère les appels POST venant des formulaires
+ */
 if (isset($_POST['action'])) {
-
     $clientController = new ClientController($bdd);
 
     switch ($_POST['action']) {
@@ -32,109 +34,160 @@ if (isset($_POST['action'])) {
 
         default:
             header('Location: index.php?page=espace_client');
-            break;
+            exit;
     }
 }
 
+/**
+ * --- CLASSE CLIENT CONTROLLER ---
+ */
 class ClientController {
 
     private $client;
     private $bdd;
 
-    function __construct($bdd) {
+    public function __construct($bdd) {
         $this->bdd = $bdd;
-        $this->client = new Client($bdd);
+        $this->client = new Client($bdd); // Instance du modèle Client
     }
 
+    /**
+     * Traitement de l'inscription (Action: ajouter)
+     */
     public function create() {
+        // Hachage sécurisé du mot de passe
         $mdpHash = password_hash($_POST['motdepasse'], PASSWORD_DEFAULT);
+        
+        // Récupération et nettoyage des données du formulaire
+        $nom         = trim($_POST['nom']);
+        $prenom      = trim($_POST['prenom']);
+        $mail        = trim($_POST['mail']);
+        $telephone   = isset($_POST['telephone']) ? trim($_POST['telephone']) : null;
+        $poids       = $_POST['poids'];
+        $taille      = $_POST['taille'];
+        $objectif    = $_POST['objectif'];
+        $motivation  = trim($_POST['description']); // 'description' dans ton HTML
 
-        $this->client->ajouterClient(
-            $_POST['nom'],
-            $_POST['prenom'],
-            $_POST['mail'],
+        // Appel au modèle pour l'insertion en BDD
+        $resultat = $this->client->ajouterClient(
+            $nom,
+            $prenom,
+            $mail,
+            $telephone, 
             $mdpHash, 
-            $_POST['poids'],
-            $_POST['taille'],
-            $_POST['basic_fit'],
-            $_POST['objectif'],
-            // Dispo a été retiré comme demandé
-            $_POST['description']
+            $poids,
+            $taille,
+            $objectif,
+            $motivation
         );
 
-        header('Location: index.php?page=connexion_client');
+        if ($resultat) {
+            // Succès : redirection vers la page de connexion
+            header('Location: index.php?page=connexion_client&success=1');
+        } else {
+            // Échec : arrêt du script avec message d'erreur
+            die("Erreur critique : Impossible d'enregistrer le client en base de données.");
+        }
         exit;
     }
 
+    /**
+     * Traitement de la connexion (Action: connexion)
+     */
     public function login() {
-        $user = $this->client->getClientByEmail($_POST['mail']);
+        $user = $this->client->getClientByEmail(trim($_POST['mail']));
 
-        if ($user && password_verify($_POST['motdepasse'], $user['mot_de_passe'])) {
+        // Vérification de l'existence et du mot de passe
+        if ($user && password_verify(trim($_POST['motdepasse']), $user['mot_de_passe'])) {
             
+            // Initialisation de la session
             $_SESSION['id_client'] = $user['id_client'];
-            $_SESSION['prenom'] = $user['prenom'];
-            $_SESSION['role'] = 'client';
+            $_SESSION['prenom']    = $user['prenom'];
+            $_SESSION['role']      = 'client';
 
             header('Location: index.php?page=espace_client');
             exit;
         } else {
-            header('Location: index.php?page=connexion_client&error=1');
+            // Identifiants incorrects
+            header('Location: index.php?page=connexion_client&error=auth');
             exit;
         }
     }
 
+    /**
+     * Déconnexion
+     */
     public function logout() {
         session_destroy();
         header('Location: index.php');
         exit;
     }
 
+    /**
+     * Affichage du tableau de bord client
+     */
     public function dashboard() {
+        // Sécurité : Vérifier que le client est bien connecté
         if (!isset($_SESSION['id_client'])) {
             header('Location: index.php?page=connexion_client');
             exit;
         }
 
-        // 1. Infos Client
+        // 1. Récupération des infos du profil
         $monProfil = $this->client->selectById($_SESSION['id_client']);
 
-        // 2. Infos Coach (si existe)
+        // 2. Récupération du coach associé (si id_coach n'est pas NULL)
         $monCoach = null;
-        if ($monProfil['id_coach']) {
+        if (!empty($monProfil['id_coach'])) {
             $coachModel = new Coach($this->bdd);
             $monCoach = $coachModel->selectById($monProfil['id_coach']);
         }
 
-        // 3. Infos Programme
-        $progModel = new Programme($this->bdd);
-        // On récupère le programme qui correspond à l'objectif du client
-        $monProgramme = $progModel->getProgrammeByType($monProfil['objectif']);
+        // 3. Récupération du programme correspondant à l'objectif du client
+        $programmeModel = new Programme($this->bdd);
+        $monProgramme = $programmeModel->getProgrammeByType($monProfil['objectif']);
 
+        // 4. Détails des exercices si un programme existe
+        $exercicesDetails = [];
+        if ($monProgramme && isset($monProgramme['id_programme'])) {
+            $exercicesDetails = $programmeModel->getDetailsProgramme($monProgramme['id_programme']);
+        }
+
+        // Chargement de la vue
         require('view/client/espaceClient.php');
     }
 
+    /**
+     * Mise à jour du profil (Action: update)
+     */
     public function update() {
+        $telephone = isset($_POST['telephone']) ? trim($_POST['telephone']) : null;
+
         $this->client->modifierClient(
             $_POST['id_client'],
-            $_POST['nom'],
-            $_POST['prenom'],
-            $_POST['mail'],
-            $_POST['motdepasse'],
+            trim($_POST['nom']),
+            trim($_POST['prenom']),
+            trim($_POST['mail']),
+            $telephone, 
+            $_POST['motdepasse'], // À gérer si changement de mdp souhaité
             $_POST['poids'],
             $_POST['taille'],
-            $_POST['basic_fit'],
             $_POST['objectif'],
-            $_POST['description']
+            trim($_POST['description'])
         );
-
-        header('Location: index.php?page=espace_client');
+        header('Location: index.php?page=espace_client&success=updated');
         exit;
     }
 
+    /**
+     * Suppression du compte (Action: supprimer)
+     */
     public function delete() {
-        $this->client->supprimerClient($_POST['id_client']);
+        if (isset($_POST['id_client'])) {
+            $this->client->supprimerClient($_POST['id_client']);
+            session_destroy();
+        }
         header('Location: index.php');
         exit;
     }
 }
-?>

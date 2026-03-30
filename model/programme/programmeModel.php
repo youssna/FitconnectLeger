@@ -16,6 +16,23 @@ class Programme {
         return $req->fetch();
     }
 
+    // --- LA NOUVELLE FONCTION POUR LES EXERCICES (Les 3 tables) ---
+    public function getDetailsProgramme($id_programme) {
+        $req = $this->bdd->prepare("
+            SELECT s.jour_numero, s.titre AS titre_seance, 
+                   e.nom AS nom_exercice, e.groupe_musculaire, 
+                   se.series, se.repetitions, se.repos_secondes
+            FROM seance s
+            JOIN seance_exercice se ON s.id_seance = se.id_seance
+            JOIN exercice e ON se.id_exercice = e.id_exercice
+            WHERE s.id_programme = :id_programme
+            ORDER BY s.jour_numero ASC, se.id_exercice ASC
+        ");
+        $req->bindParam(':id_programme', $id_programme);
+        $req->execute();
+        return $req->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     // --- TES ANCIENNES FONCTIONS (CRUD ADMIN) ---
     
     public function allProgramme(){

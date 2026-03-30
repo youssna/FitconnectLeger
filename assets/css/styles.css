@@ -1308,3 +1308,107 @@ textarea.form-input {
     color: #666;
     margin-top: 2px;
 }
+/* =========================================
+   STYLE DES TABLEAUX DU PROGRAMME
+   ========================================= */
+
+   .seances-container {
+    margin-top: 35px;
+}
+
+.seance-block {
+    background-color: #ffffff;
+    margin-bottom: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border: 1px solid #e1e8ed;
+    overflow: hidden; /* Permet aux coins arrondis de masquer les bords du tableau */
+}
+
+/* Titre du jour d'entraînement (En-tête du bloc) */
+.seance-titre {
+    color: #ffffff;
+    background-color: #d35400; /* Orange principal */
+    margin: 0;
+    padding: 16px 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+/* Conteneur pour rendre le tableau scrollable sur mobile */
+.table-responsive {
+    overflow-x: auto;
+}
+
+/* Le tableau en lui-même */
+.programme-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* En-têtes des colonnes */
+.programme-table th {
+    background-color: #f8f9fa;
+    color: #7f8c8d;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 15px 20px;
+    border-bottom: 2px solid #e1e8ed;
+}
+
+/* Cellules du tableau */
+.programme-table td {
+    padding: 16px 20px;
+    border-bottom: 1px solid #f1f2f6;
+    vertical-align: middle;
+}
+
+/* Effet au survol d'une ligne */
+.programme-table tbody tr:hover {
+    background-color: #fff9f5;
+}
+
+/* On enlève la bordure sur la toute dernière ligne */
+.programme-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Style spécifique des cellules */
+.exo-nom strong {
+    color: #2c3e50;
+    font-size: 1.05em;
+}
+
+.exo-muscle {
+    color: #95a5a6;
+    font-style: italic;
+    font-size: 0.95em;
+}
+
+.exo-stats {
+    color: #34495e;
+}
+
+/* Petit badge pour rendre le nombre de séries plus visuel */
+.badge-stat {
+    display: inline-block;
+    background-color: #ecf0f1;
+    color: #2c3e50;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: bold;
+}
+
+.no-data-alert {
+    padding: 20px;
+    background-color: #f8f9fa;
+    text-align: center;
+    border-radius: 8px;
+    color: #7f8c8d;
+    border: 1px solid #e1e8ed;
+    margin-top: 20px;
+}

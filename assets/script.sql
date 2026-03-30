@@ -1,187 +1,168 @@
--- 1. CRÉATION DE LA BASE DE DONNÉES
-CREATE DATABASE IF NOT EXISTS fitconnect CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE fitconnect;
+-- Base de données : `fitconnect`
 
--- 2. CRÉATION DE LA TABLE COACH
-CREATE TABLE IF NOT EXISTS coach (
-    id_coach INT AUTO_INCREMENT PRIMARY KEY,
-    nom VARCHAR(50) NOT NULL,
-    prenom VARCHAR(50) NOT NULL,
-    mail VARCHAR(100) NOT NULL UNIQUE,
-    mot_de_passe VARCHAR(255) NULL, -- Sera rempli lors de l'activation du compte
-    adresse VARCHAR(255) NOT NULL,
-    basic_fit TINYINT(1) DEFAULT 0, -- 0 = Non, 1 = Oui
-    specialite VARCHAR(50) NOT NULL, -- 'prise_masse', 'seche', 'remise_forme'
-    cv VARCHAR(255) NOT NULL,
-    valide TINYINT(1) DEFAULT 0 -- Utile si tu veux activer les comptes manuellement en BDD
-) ENGINE=InnoDB;
+-- --------------------------------------------------------
+-- STRUCTURE DES TABLES
+-- --------------------------------------------------------
 
--- 3. CRÉATION DE LA TABLE CLIENT
-CREATE TABLE IF NOT EXISTS client (
-    id_client INT AUTO_INCREMENT PRIMARY KEY,
-    nom VARCHAR(50) NOT NULL,
-    prenom VARCHAR(50) NOT NULL,
-    mail VARCHAR(100) NOT NULL UNIQUE,
-    mot_de_passe VARCHAR(255) NOT NULL,
-    poids INT NOT NULL,
-    taille INT NOT NULL,
-    basic_fit TINYINT(1) DEFAULT 0,
-    objectif VARCHAR(50) NOT NULL, -- Doit correspondre à la spécialité du coach
-    motivation TEXT NOT NULL,
-    id_coach INT NULL, -- Clé étrangère vers le coach (NULL au début)
-    CONSTRAINT fk_client_coach FOREIGN KEY (id_coach) REFERENCES coach(id_coach) ON DELETE SET NULL
-) ENGINE=InnoDB;
+CREATE TABLE `utilisateur` (
+  `id_utilisateur` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(100) NOT NULL UNIQUE,
+  `mot_de_passe` varchar(255) NOT NULL,
+  `role` enum('CLIENT','COACH','ADMIN') NOT NULL DEFAULT 'CLIENT',
+  `actif` tinyint(1) NOT NULL DEFAULT '1',
+  `date_creation` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `date_modification` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_utilisateur`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 4. CRÉATION DE LA TABLE PROGRAMME 
--- (Sert de référence si tu veux stocker les programmes en dur plus tard)
-CREATE TABLE IF NOT EXISTS programme (
-    id_programme INT AUTO_INCREMENT PRIMARY KEY,
-    nom VARCHAR(100) NOT NULL,
-    description TEXT NOT NULL,
-    type VARCHAR(50) NOT NULL
-) ENGINE=InnoDB;
+CREATE TABLE `coach` (
+  `id_coach` int NOT NULL AUTO_INCREMENT,
+  `nom` varchar(50) NOT NULL,
+  `prenom` varchar(50) NOT NULL,
+  `adresse` varchar(255) NOT NULL,
+  `specialite` varchar(50) NOT NULL,
+  `cv` text NOT NULL,
+  `valide` tinyint(1) NOT NULL DEFAULT '0',
+  `date_validation` timestamp NULL DEFAULT NULL,
+  `mail` varchar(100) UNIQUE,
+  `mot_de_passe` varchar(255),
+  `telephone` varchar(20),
+  PRIMARY KEY (`id_coach`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 1. On vide la table pour effacer les anciennes versions
-TRUNCATE TABLE programme;
+CREATE TABLE `client` (
+  `id_client` int NOT NULL AUTO_INCREMENT,
+  `nom` varchar(50) NOT NULL,
+  `prenom` varchar(50) NOT NULL,
+  `poids` decimal(5,2) NOT NULL,
+  `taille` int NOT NULL,
+  `objectif` varchar(50) NOT NULL,
+  `motivation` text NOT NULL,
+  `id_coach` int DEFAULT NULL,
+  `mail` varchar(100) UNIQUE,
+  `telephone` varchar(20),
+  `mot_de_passe` varchar(255),
+  `date_inscription` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_client`),
+  CONSTRAINT `fk_client_coach` FOREIGN KEY (`id_coach`) REFERENCES `coach` (`id_coach`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2. On insère les 3 programmes COMPLETS
--- Le HTML est stocké directement pour s'afficher proprement sur le site
+CREATE TABLE `programme` (
+  `id_programme` int NOT NULL AUTO_INCREMENT,
+  `nom` varchar(100) NOT NULL,
+  `description` text NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `niveau` enum('debutant','intermediaire','confirme') DEFAULT 'debutant',
+  `duree_semaines` int DEFAULT '8',
+  `frequence_par_semaine` int DEFAULT '3',
+  `date_creation` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_programme`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-INSERT INTO programme (nom, type, description) VALUES 
-(
-    'Programme Hypertrophie (Prise de Masse)', 
-    'prise_masse', 
-    '
-    <p style="margin-bottom:20px;"><strong>Objectif :</strong> Maximiser le volume musculaire via un split 4 jours. Charges lourdes et récupération complète.</p>
-    
-    <h4 style="color:#fe7000; margin-top:20px; border-bottom:1px solid #eee; padding-bottom:10px;">SÉANCE 1 : PECTORAUX & TRICEPS</h4>
-    <table class="custom-table">
-        <thead><tr><th>Exercice</th><th>Séries</th><th>Reps</th><th>Repos</th></tr></thead>
-        <tbody>
-            <tr><td>Développé Couché Barre</td><td>4</td><td>8-10</td><td>2 min</td></tr>
-            <tr><td>Développé Incliné Haltères</td><td>4</td><td>10-12</td><td>1 min 30</td></tr>
-            <tr><td>Écarté Poulie Vis-à-vis</td><td>3</td><td>15</td><td>1 min</td></tr>
-            <tr><td>Barre au front (Triceps)</td><td>4</td><td>10-12</td><td>1 min 30</td></tr>
-            <tr><td>Extension Poulie Corde</td><td>3</td><td>12-15</td><td>1 min</td></tr>
-        </tbody>
-    </table>
+CREATE TABLE `exercice` (
+  `id_exercice` int NOT NULL AUTO_INCREMENT,
+  `nom` varchar(100) NOT NULL,
+  `description` text,
+  `groupe_musculaire` varchar(50),
+  PRIMARY KEY (`id_exercice`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-    <h4 style="color:#fe7000; margin-top:30px; border-bottom:1px solid #eee; padding-bottom:10px;">SÉANCE 2 : DOS & BICEPS</h4>
-    <table class="custom-table">
-        <thead><tr><th>Exercice</th><th>Séries</th><th>Reps</th><th>Repos</th></tr></thead>
-        <tbody>
-            <tr><td>Tractions (Lestées si besoin)</td><td>4</td><td>8-10</td><td>2 min</td></tr>
-            <tr><td>Rowing Barre Buste penché</td><td>4</td><td>10</td><td>1 min 30</td></tr>
-            <tr><td>Tirage Vertical Prise serrée</td><td>3</td><td>12</td><td>1 min 30</td></tr>
-            <tr><td>Curl Barre EZ</td><td>4</td><td>10-12</td><td>1 min 30</td></tr>
-            <tr><td>Curl Marteau Haltères</td><td>3</td><td>12</td><td>1 min</td></tr>
-        </tbody>
-    </table>
+CREATE TABLE `seance` (
+  `id_seance` int NOT NULL AUTO_INCREMENT,
+  `id_programme` int NOT NULL,
+  `jour_numero` int DEFAULT NULL,
+  `titre` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id_seance`),
+  CONSTRAINT `fk_seance_programme` FOREIGN KEY (`id_programme`) REFERENCES `programme` (`id_programme`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-    <h4 style="color:#fe7000; margin-top:30px; border-bottom:1px solid #eee; padding-bottom:10px;">SÉANCE 3 : JAMBES COMPLÈTES</h4>
-    <table class="custom-table">
-        <thead><tr><th>Exercice</th><th>Séries</th><th>Reps</th><th>Repos</th></tr></thead>
-        <tbody>
-            <tr><td>Squat Barre</td><td>4</td><td>6-8</td><td>3 min</td></tr>
-            <tr><td>Presse à cuisses</td><td>4</td><td>10-12</td><td>2 min</td></tr>
-            <tr><td>Leg Extension</td><td>3</td><td>15</td><td>1 min</td></tr>
-            <tr><td>Soulevé de terre Roumain</td><td>4</td><td>10</td><td>2 min</td></tr>
-            <tr><td>Mollets Debout</td><td>4</td><td>15</td><td>1 min</td></tr>
-        </tbody>
-    </table>
+CREATE TABLE `seance_exercice` (
+  `id_seance` int NOT NULL,
+  `id_exercice` int NOT NULL,
+  `series` int NOT NULL,
+  `repetitions` varchar(50) NOT NULL,
+  `repos_secondes` int DEFAULT NULL,
+  PRIMARY KEY (`id_seance`,`id_exercice`),
+  CONSTRAINT `fk_se_seance` FOREIGN KEY (`id_seance`) REFERENCES `seance` (`id_seance`) ON DELETE CASCADE,
+  CONSTRAINT `fk_se_exercice` FOREIGN KEY (`id_exercice`) REFERENCES `exercice` (`id_exercice`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-    <h4 style="color:#fe7000; margin-top:30px; border-bottom:1px solid #eee; padding-bottom:10px;">SÉANCE 4 : ÉPAULES & RAPPEL</h4>
-    <table class="custom-table">
-        <thead><tr><th>Exercice</th><th>Séries</th><th>Reps</th><th>Repos</th></tr></thead>
-        <tbody>
-            <tr><td>Développé Militaire</td><td>4</td><td>8-10</td><td>2 min</td></tr>
-            <tr><td>Élévations Latérales</td><td>4</td><td>15</td><td>1 min</td></tr>
-            <tr><td>Oiseau (Arrière d\'épaule)</td><td>4</td><td>15</td><td>1 min</td></tr>
-            <tr><td>Shrugs (Trapèzes)</td><td>4</td><td>12</td><td>1 min</td></tr>
-        </tbody>
-    </table>
-    '
-),
-(
-    'Programme Sèche & Définition', 
-    'seche', 
-    '
-    <p style="margin-bottom:20px;"><strong>Objectif :</strong> Brûler les graisses en maintenant la masse musculaire. Intensité élevée, temps de repos courts.</p>
+CREATE TABLE `client_programme` (
+  `id_client_programme` int NOT NULL AUTO_INCREMENT,
+  `id_client` int NOT NULL,
+  `id_programme` int NOT NULL,
+  `date_debut` date NOT NULL,
+  PRIMARY KEY (`id_client_programme`),
+  CONSTRAINT `fk_cp_client` FOREIGN KEY (`id_client`) REFERENCES `client` (`id_client`) ON DELETE CASCADE,
+  CONSTRAINT `fk_cp_programme` FOREIGN KEY (`id_programme`) REFERENCES `programme` (`id_programme`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-    <h4 style="color:#fe7000; margin-top:20px; border-bottom:1px solid #eee; padding-bottom:10px;">SÉANCE 1 : HAUT DU CORPS + HIIT</h4>
-    <table class="custom-table">
-        <thead><tr><th>Exercice</th><th>Séries</th><th>Reps</th><th>Repos</th></tr></thead>
-        <tbody>
-            <tr><td>Développé Couché Haltères</td><td>4</td><td>12-15</td><td>45 sec</td></tr>
-            <tr><td>Tirage Poitrine Large</td><td>4</td><td>12-15</td><td>45 sec</td></tr>
-            <tr><td>Superset : Elev. Latérales / Curl</td><td>3</td><td>15</td><td>30 sec</td></tr>
-            <tr><td>Dips</td><td>3</td><td>Max</td><td>45 sec</td></tr>
-            <tr><td><strong>FINISHER :</strong> Tapis de course</td><td>15 min</td><td>HIIT</td><td>-</td></tr>
-        </tbody>
-    </table>
+CREATE TABLE `refus_coach` (
+  `id_refus` int NOT NULL AUTO_INCREMENT,
+  `id_coach` int NOT NULL,
+  `id_client` int NOT NULL,
+  `date_refus` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_refus`),
+  CONSTRAINT `fk_refus_coach` FOREIGN KEY (`id_coach`) REFERENCES `coach` (`id_coach`) ON DELETE CASCADE,
+  CONSTRAINT `fk_refus_client` FOREIGN KEY (`id_client`) REFERENCES `client` (`id_client`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-    <h4 style="color:#fe7000; margin-top:30px; border-bottom:1px solid #eee; padding-bottom:10px;">SÉANCE 2 : BAS DU CORPS + ABDOS</h4>
-    <table class="custom-table">
-        <thead><tr><th>Exercice</th><th>Séries</th><th>Reps</th><th>Repos</th></tr></thead>
-        <tbody>
-            <tr><td>Fentes Marchées (Lestées)</td><td>4</td><td>20 pas</td><td>45 sec</td></tr>
-            <tr><td>Goblet Squat</td><td>4</td><td>15</td><td>45 sec</td></tr>
-            <tr><td>Leg Curl Ischios</td><td>3</td><td>15</td><td>30 sec</td></tr>
-            <tr><td>Mollets assis</td><td>4</td><td>20</td><td>30 sec</td></tr>
-            <tr><td>Circuit Abdos (Crunch/Gainage)</td><td>4</td><td>Circuit</td><td>1 min</td></tr>
-        </tbody>
-    </table>
+-- --------------------------------------------------------
+-- INSERTIONS DES DONNÉES
+-- --------------------------------------------------------
 
-    <h4 style="color:#fe7000; margin-top:30px; border-bottom:1px solid #eee; padding-bottom:10px;">SÉANCE 3 : FULL BODY METABOLIC</h4>
-    <table class="custom-table">
-        <thead><tr><th>Exercice</th><th>Séries</th><th>Reps</th><th>Repos</th></tr></thead>
-        <tbody>
-            <tr><td>Burpees</td><td>4</td><td>15</td><td>30 sec</td></tr>
-            <tr><td>Thrusters (Squat + Press)</td><td>4</td><td>12</td><td>45 sec</td></tr>
-            <tr><td>Kettlebell Swing</td><td>4</td><td>20</td><td>45 sec</td></tr>
-            <tr><td>Corde à sauter</td><td>5</td><td>1 min</td><td>30 sec</td></tr>
-            <tr><td>Rameur</td><td>10 min</td><td>Intense</td><td>-</td></tr>
-        </tbody>
-    </table>
-    '
-),
-(
-    'Programme Remise en Forme (Santé)', 
-    'remise_forme', 
-    '
-    <p style="margin-bottom:20px;"><strong>Objectif :</strong> Reprendre une activité physique saine et globale. 3 fois par semaine (Lundi / Mercredi / Vendredi).</p>
+-- Admin
+INSERT INTO `utilisateur` (`email`, `mot_de_passe`, `role`) VALUES
+('admin@fitconnect.fr', '$2a$10$B5PyXlmBGkBKq4TQ4xixOujJqhlaxQJy1B4.T7rAV6B59sKfhTYw.', 'ADMIN');
 
-    <h4 style="color:#fe7000; margin-top:20px; border-bottom:1px solid #eee; padding-bottom:10px;">SÉANCE TYPE (FULL BODY)</h4>
-    <p><em>Effectuez ce circuit complet à chaque séance. Augmentez les poids progressivement.</em></p>
-    <table class="custom-table">
-        <thead><tr><th>Ordre</th><th>Exercice</th><th>Séries</th><th>Reps</th><th>Repos</th></tr></thead>
-        <tbody>
-            <tr><td>1. Échauffement</td><td>Vélo ou Elliptique</td><td>10 min</td><td>Léger</td><td>-</td></tr>
-            <tr><td>2. Jambes</td><td>Squat Poids du corps</td><td>3</td><td>15</td><td>1 min</td></tr>
-            <tr><td>3. Poussée</td><td>Pompes (sur genoux si besoin)</td><td>3</td><td>10-12</td><td>1 min</td></tr>
-            <tr><td>4. Tirage</td><td>Tirage Horizontal Machine</td><td>3</td><td>15</td><td>1 min</td></tr>
-            <tr><td>5. Lombaires</td><td>Extension au banc</td><td>3</td><td>15</td><td>1 min</td></tr>
-            <tr><td>6. Abdos</td><td>Gainage frontal</td><td>3</td><td>30-45s</td><td>1 min</td></tr>
-            <tr><td>7. Retour au calme</td><td>Marche inclinée</td><td>15 min</td><td>Moyen</td><td>-</td></tr>
-        </tbody>
-    </table>
-    '
-);
--- ==========================================
--- DONNÉES DE TEST (FIXTURES)
--- ==========================================
+-- Coachs
+INSERT INTO `coach` (`nom`, `prenom`, `adresse`, `specialite`, `cv`, `valide`, `mail`, `mot_de_passe`, `telephone`) VALUES
+('Durant', 'Marc', '10 rue du Muscle, Paris', 'prise_masse', 'https://linkedin.com/pro', 1, 'marc.coach@fit.fr', '$2y$10$GsDs0.zXh.iK6dWGcXL3HuKo9xjRgvhS7/dEeaRkT.c9/dEl6vs7.', '0601020304'),
+('Leclerc', 'Julie', '5 avenue Cardio, Lyon', 'seche', 'https://linkedin.com/pro', 1, 'julie.coach@fit.fr', '$2y$10$GsDs0.zXh.iK6dWGcXL3HuKo9xjRgvhS7/dEeaRkT.c9/dEl6vs7.', '0605060708'),
+('Bernard', 'Thomas', '22 boulevard Santé, Lille', 'remise_forme', 'https://linkedin.com/pro', 1, 'thomas.coach@fit.fr', '$2y$10$GsDs0.zXh.iK6dWGcXL3HuKo9xjRgvhS7/dEeaRkT.c9/dEl6vs7.', '0609101112');
 
--- A. COACHS (Mot de passe pour tester : "1234")
--- Le hash ci-dessous correspond à "1234".
-INSERT INTO coach (nom, prenom, mail, mot_de_passe, adresse, basic_fit, specialite, cv, valide) VALUES 
-('Durand', 'Paul', 'paul.coach@mail.com', '$2y$10$g5/1.2.3.4.hash.pour.1234.correspondant.a.bcrypt', 'Paris', 1, 'prise_masse', 'cv_paul.pdf', 1),
-('Martin', 'Julie', 'julie.coach@mail.com', '$2y$10$g5/1.2.3.4.hash.pour.1234.correspondant.a.bcrypt', 'Lyon', 1, 'seche', 'cv_julie.pdf', 1);
+-- Clients
+INSERT INTO `client` (`nom`, `prenom`, `poids`, `taille`, `objectif`, `motivation`, `id_coach`, `mail`, `telephone`, `mot_de_passe`) VALUES
+('Gomez', 'Lucas', 70.00, 180, 'prise_masse', 'Prendre du muscle lourd.', 1, 'lucas@mail.com', '0701020304', '$2y$10$GsDs0.zXh.iK6dWGcXL3HuKo9xjRgvhS7/dEeaRkT.c9/dEl6vs7.'),
+('Martin', 'Sophie', 65.00, 165, 'seche', 'Perdre du gras.', 2, 'sophie@mail.com', '0705060708', '$2y$10$GsDs0.zXh.iK6dWGcXL3HuKo9xjRgvhS7/dEeaRkT.c9/dEl6vs7.'),
+('Petit', 'Jean', 95.00, 175, 'remise_forme', 'Reprendre le sport.', 3, 'jean@mail.com', '0709101112', '$2y$10$GsDs0.zXh.iK6dWGcXL3HuKo9xjRgvhS7/dEeaRkT.c9/dEl6vs7.');
 
--- Note technique : Le hash ci-dessus est fictif pour l'exemple. 
--- Pour tester la connexion coach, je te conseille de modifier le mot de passe 
--- directement dans ta BDD avec un hash que tu connais, ou d'utiliser le formulaire d'inscription.
+-- Exercices
+INSERT INTO `exercice` (`id_exercice`, `nom`, `description`, `groupe_musculaire`) VALUES
+(1, 'Développé couché', 'Masse pectorale', 'Pectoraux'),
+(2, 'Squat à la barre', 'Exercice roi jambes', 'Jambes'),
+(3, 'Soulevé de terre', 'Chaîne postérieure', 'Dos/Jambes'),
+(4, 'Tirage vertical poulie', 'Largeur du dos', 'Dos'),
+(5, 'Presse à cuisses', 'Quadriceps', 'Jambes'),
+(6, 'Burpees', 'Cardio intense', 'Full Body'),
+(7, 'Fentes marchées', 'Fessiers et brûlage calories', 'Jambes'),
+(8, 'Kettlebell Swing', 'Explosivité', 'Full Body'),
+(9, 'Corde à sauter', 'Dépense énergétique', 'Cardio'),
+(10, 'Thruster', 'Puissance', 'Full Body'),
+(11, 'Pompes', 'Poids du corps', 'Pectoraux'),
+(12, 'Gainage planche', 'Ceinture abdominale', 'Abdominaux'),
+(13, 'Squat poids du corps', 'Réapprentissage mouvement', 'Jambes'),
+(14, 'Tirage horizontal machine', 'Posture', 'Dos'),
+(15, 'Vélo elliptique', 'Cardio sans impact', 'Cardio');
 
--- B. CLIENT (Sans coach, pour tester le matching)
--- Mot de passe : "1234" (Hash valide généré par PHP pour "1234")
-INSERT INTO client (nom, prenom, mail, mot_de_passe, poids, taille, basic_fit, objectif, dispo_jours, motivation, id_coach) VALUES 
-('Dupont', 'Thomas', 'thomas.client@mail.com', '$2y$10$HuW7/..GENERIC.HASH.FOR.1234..EXAMPLE', 80, 180, 1, 'prise_masse', 'Lundi, Jeudi', 'Motivation max', NULL);      
+-- Programmes
+INSERT INTO `programme` (`id_programme`, `nom`, `description`, `type`, `niveau`, `duree_semaines`, `frequence_par_semaine`) VALUES
+(1, 'Programme Hypertrophie', 'Prise de masse avec charges lourdes.', 'prise_masse', 'intermediaire', 12, 4),
+(2, 'Sèche Express', 'HIIT et musculation légère.', 'seche', 'confirme', 8, 5),
+(3, 'Remise en Forme', 'Circuit training full-body.', 'remise_forme', 'debutant', 6, 3);
+
+-- Séances
+INSERT INTO `seance` (`id_seance`, `id_programme`, `jour_numero`, `titre`) VALUES
+(1, 1, 1, 'Jour 1 : Push'),
+(2, 1, 2, 'Jour 2 : Pull'),
+(3, 1, 3, 'Jour 3 : Legs'),
+(5, 2, 1, 'Jour 1 : Circuit Métabolique'),
+(10, 3, 1, 'Jour 1 : Initiation');
+
+-- Exercices par Séance
+INSERT INTO `seance_exercice` (`id_seance`, `id_exercice`, `series`, `repetitions`, `repos_secondes`) VALUES
+(1, 1, 4, '8 à 10', 120),
+(1, 11, 4, 'Echec', 90),
+(3, 2, 5, '6 à 8', 180),
+(5, 6, 4, '15', 45),
+(10, 13, 3, '12', 90);
